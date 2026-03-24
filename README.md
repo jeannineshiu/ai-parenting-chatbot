@@ -23,19 +23,34 @@ Parents often feel overwhelmed by conflicting online advice. Our goal is to brid
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
+
+The application is built using a microservices approach, fully containerized with Docker. The RAG pipeline ensures that the assistant's responses are grounded in verified parenting expertise.
 
 ```mermaid
-flowchart LR
-    User --> UI[Gradio UI]
-    UI --> API[FastAPI Backend]
-    API --> RAG[RAG Pipeline]
-    RAG --> OpenAI[OpenAI API]
+flowchart TD
+    subgraph Frontend [Docker: Frontend Service]
+    A[User] <--> B[Gradio UI]
+    end
 
-    RAG --> Search[Embedding Search]
-    Search --> DB[Markdown Knowledge Base]
+    subgraph Backend [Docker: Backend Service]
+    B <--> C[FastAPI API]
+    C --> D[RAG Engine]
+    
+    subgraph RAG_Pipeline [RAG Pipeline]
+    D --> E[1. Semantic Search]
+    E -.-> F[(Markdown Expert DB)]
+    F -.-> G[2. Context Augmentation]
+    G --> H[3. LLM Generation]
+    end
+    end
+
+    H <--> I[OpenAI / Azure OpenAI]
+
+    style Frontend fill:#e1f5fe,stroke:#01579b
+    style Backend fill:#fff3e0,stroke:#e65100
 ```
-                           
+     
 ---
 
 ## 🧠 Tech Stack
