@@ -25,11 +25,15 @@ Parents often feel overwhelmed by conflicting online advice. Our goal is to brid
 
 ## 🏗️ Architecture
 
-User → Gradio UI → FastAPI → RAG Pipeline → OpenAI API
-                              ↓
-                         Embedding Search
-                              ↓
-                           Markdown DB
+```mermaid
+flowchart LR
+    User --> UI[Gradio UI]
+    UI --> API[FastAPI Backend]
+    API --> RAG[RAG Pipeline]
+    RAG --> OpenAI[OpenAI API]
+
+    RAG --> Search[Embedding Search]
+    Search --> DB[Markdown Knowledge Base]
                            
 ---
 
