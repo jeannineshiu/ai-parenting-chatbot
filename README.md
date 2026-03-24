@@ -3,6 +3,10 @@
 This project was developed as a solution for the **"AI for Impact" Hackathon**, focusing on transforming digital family support in Germany. It leverages the expert-vetted knowledge base of **ElternLeben.de** to provide parents with 24/7, judgment-free, and research-based guidance.
 
 ---
+## 🧩 Demo
+<img src="demo.png" width="1000"/>
+
+---
 
 ## 🌟 Mission & Impact
 
