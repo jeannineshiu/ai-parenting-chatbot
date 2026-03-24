@@ -57,7 +57,8 @@ flowchart TD
 
 | Layer | Technology |
 | :--- | :--- |
-| **LLM / Embeddings** | OpenAI GPT-4o / Azure OpenAI |
+| **LLM / Embeddings** | OpenAI GPT-4o-mini / OpenAI text-embedding-3-small |
+| **Vector Search** | NumPy (Cosine Similarity) |
 | **Orchestration** | Docker & Docker Compose |
 | **Backend Framework** | FastAPI (Python 3.10+) |
 | **Frontend UI** | Gradio 5.x |
