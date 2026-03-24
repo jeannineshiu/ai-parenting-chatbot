@@ -91,7 +91,7 @@ flowchart TD
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/your-username/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git)
+git clone [https://github.com/jeannineshiu/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git)
 cd ai-parenting-chatbot
 ```
 
