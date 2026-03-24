@@ -23,15 +23,14 @@ Parents often feel overwhelmed by conflicting online advice. Our goal is to brid
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
-The application is split into two primary services communicating over a private Docker network:
-
-1.  **Backend (FastAPI):** Orchestrates the RAG pipeline—document indexing, semantic search, and context-injected response generation.
-2.  **Frontend (Gradio 5):** A modern, reactive UI that supports multi-turn conversations and handles API errors gracefully.
-
-
-
+User → Gradio UI → FastAPI → RAG Pipeline → OpenAI API
+                              ↓
+                         Embedding Search
+                              ↓
+                           Markdown DB
+                           
 ---
 
 ## 🧠 Tech Stack
@@ -43,6 +42,16 @@ The application is split into two primary services communicating over a private 
 | **Backend Framework** | FastAPI (Python 3.10+) |
 | **Frontend UI** | Gradio 5.x |
 | **Data Source** | ElternLeben.de Knowledge Base (750+ MD files) |
+
+---
+
+## 👩‍💻 My Contribution
+
+- Designed and implemented end-to-end RAG system
+- Built FastAPI backend with semantic search
+- Developed Gradio-based chat interface
+- Containerized the system using Docker
+- Implemented embedding caching for performance optimization
 
 ---
 
@@ -61,7 +70,7 @@ The application is split into two primary services communicating over a private 
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/your-username/ai-parenting-chatbot.git](https://github.com/your-username/ai-parenting-chatbot.git)
+git clone [https://github.com/your-username/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git)
 cd ai-parenting-chatbot
 ```
 
