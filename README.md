@@ -82,13 +82,13 @@ docker compose up --build
 * API Documentation: http://localhost:8000/docs
 
 ## 📌 Technical Deep Dive: The RAG Pipeline
-* Ingestion: 750+ Markdown files from the ElternLeben dataset are processed, cleaned, and partitioned into chunks.
+* **Ingestion**: 750+ Markdown files from the ElternLeben dataset are processed, cleaned, and partitioned into chunks.
 
-* Retrieval: User queries are vectorized and matched against the knowledge base using semantic similarity.
+* **Retrieval**: User queries are vectorized and matched against the knowledge base using semantic similarity.
 
-* Augmentation: The most relevant expert content is injected into the LLM prompt as context.
+* **Augmentation**: The most relevant expert content is injected into the LLM prompt as context.
 
-* Generation: The model generates a response grounded strictly in the provided ElternLeben expertise to ensure safety and accuracy.
+* **Generation**: The model generates a response grounded strictly in the provided ElternLeben expertise to ensure safety and accuracy.
 
 ## 🛣️ Roadmap & Future Improvements
 
