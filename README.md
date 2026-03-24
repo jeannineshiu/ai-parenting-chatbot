@@ -34,6 +34,7 @@ flowchart LR
 
     RAG --> Search[Embedding Search]
     Search --> DB[Markdown Knowledge Base]
+```
                            
 ---
 
