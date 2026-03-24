@@ -54,6 +54,8 @@ The application is split into two primary services communicating over a private 
 ├── data/               # 750+ Markdown articles from ElternLeben.de
 ├── .env.example        # Template for environment variables
 └── docker-compose.yml  # Microservices orchestration
+```
+---
 
 ## ⚙️ Setup & Installation
 
@@ -61,15 +63,18 @@ The application is split into two primary services communicating over a private 
 ```bash
 git clone [https://github.com/your-username/ai-parenting-chatbot.git](https://github.com/your-username/ai-parenting-chatbot.git)
 cd ai-parenting-chatbot
+```
 
 ### 2. Configure Environment Variables
 Create a `.env` file in the root directory and add your API key:
 ```bash
 OPENAI_API_KEY=your_actual_key_here
+```
 
 ### 3. Launch with Docker
 ```bash
 docker compose up --build
+```
 
 ### 4. Access the Assistant
 * Frontend UI: http://localhost:7860
