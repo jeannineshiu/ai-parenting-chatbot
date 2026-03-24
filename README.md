@@ -54,3 +54,41 @@ The application is split into two primary services communicating over a private 
 ├── data/               # 750+ Markdown articles from ElternLeben.de
 ├── .env.example        # Template for environment variables
 └── docker-compose.yml  # Microservices orchestration
+
+## ⚙️ Setup & Installation
+
+### 1. Clone the Repository
+```bash
+git clone [https://github.com/your-username/ai-parenting-chatbot.git](https://github.com/your-username/ai-parenting-chatbot.git)
+cd ai-parenting-chatbot
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory and add your API key:
+```bash
+OPENAI_API_KEY=your_actual_key_here
+
+### 3. Launch with Docker
+```bash
+docker compose up --build
+
+### 4. Access the Assistant
+* Frontend UI: http://localhost:7860
+
+* API Documentation: http://localhost:8000/docs
+
+## 📌 Technical Deep Dive: The RAG Pipeline
+* Ingestion: 750+ Markdown files from the ElternLeben dataset are processed, cleaned, and partitioned into chunks.
+
+* Retrieval: User queries are vectorized and matched against the knowledge base using semantic similarity.
+
+* Augmentation: The most relevant expert content is injected into the LLM prompt as context.
+
+* Generation: The model generates a response grounded strictly in the provided ElternLeben expertise to ensure safety and accuracy.
+
+## 🛣️ Roadmap & Future Improvements
+
+- [ ] **Vector Database:** Transition from in-memory search to **FAISS** or **ChromaDB** for enhanced scalability and performance as the knowledge base grows.
+- [ ] **Hybrid Search:** Combine semantic search with **BM25 keyword matching** to better handle specific German medical, legal, and parenting terminology.
+- [ ] **Evaluation:** Implement **Ragas** (RAG Assessment) to quantitatively measure "Faithfulness," "Answer Relevancy," and "Context Precision."
+- [ ] **Cloud Deployment:** Professional production deployment via **Azure Container Apps** for high availability and automated scaling.
+
