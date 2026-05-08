@@ -21,7 +21,7 @@ def chat(message, history):
         # Format sources into a Markdown list if they exist
         if sources:
             sources_text = "\n".join([
-                f"- [{s.split('/')[-1]}]({s})"
+                f"- [{s.rstrip('/').split('/')[-1]}]({s})"
                 for s in sources
             ])
             full_response = f"{answer}\n\n📚 **Sources:**\n{sources_text}"

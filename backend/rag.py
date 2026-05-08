@@ -26,6 +26,19 @@ import json
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "embedding_cache.json")
 
+def extract_url(text):
+    in_frontmatter = False
+    for line in text.split("\n"):
+        if line.strip() == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            else:
+                break
+        if in_frontmatter and line.startswith("url:"):
+            return line.split("url:", 1)[1].strip().strip("'\"")
+    return ""
+
 def clean_text(text):
     lines = text.split("\n")
     
@@ -76,23 +89,28 @@ def load_documents(folder_path="data"):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
 
+                    url = extract_url(content)
                     content = clean_text(content)
 
                     chunks = chunk_text(content)
 
                     for chunk in chunks:
-                        #embedding = get_embedding(chunk)
                         embedding = np.array(get_embedding(chunk))
 
                         docs.append({
                             "content": chunk,
                             "embedding": embedding,
-                            "source": file_path
+                            "source": file_path,
+                            "url": url
                         })
 
-    # 存 cache
-    with open(CACHE_FILE, "w") as f:
-        json.dump(docs, f, separators=(",", ":"))
+    # 存 cache（embedding 從 ndarray 轉成 list 才能 JSON 序列化）
+    serializable = [
+        {**doc, "embedding": doc["embedding"].tolist()}
+        for doc in docs
+    ]
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, separators=(",", ":"))
 
     return docs
 

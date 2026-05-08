@@ -9,6 +9,7 @@ services:
       - .env
     volumes:
       - ./backend:/app
+      - ./data:/data
 
   frontend:
     build: ./frontend

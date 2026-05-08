@@ -56,4 +56,8 @@ def chat(query: Query):
 
     chat_history.append({"role": "assistant", "content": answer})
 
-    return {"answer": answer}
+    sources = list(dict.fromkeys(
+        doc["url"] for doc in results if doc.get("url")
+    ))
+
+    return {"answer": answer, "sources": sources}
