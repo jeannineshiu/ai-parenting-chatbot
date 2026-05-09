@@ -1,133 +1,210 @@
-# 👶 AI Parenting Assistant: Empowering Families with ElternLeben.de
+# 👶 AI Parenting Assistant — ElternLeben.de
 
-This project was developed as a solution for the **"AI for Impact" Hackathon**, focusing on transforming digital family support in Germany. It leverages the expert-vetted knowledge base of **ElternLeben.de** to provide parents with 24/7, judgment-free, and research-based guidance.
-
----
-## 🧩 Demo
-<img src="demo.png" width="1000"/>
+> Expert-backed parenting guidance, available 24/7 — built for the **AI for Impact Hackathon** in Germany.
 
 ---
 
-## 🌟 Mission & Impact
+## 🌍 Social Impact
 
-Parents often feel overwhelmed by conflicting online advice. Our goal is to bridge the gap between **professional expertise** and **instant accessibility**. By grounding a Large Language Model (LLM) in **750+ verified articles** from ElternLeben.de, we ensure that the AI's support is:
+In Germany, professional parenting counselling is expensive, slow, and often inaccessible at the moments parents need it most — like 2 AM when a baby won't stop crying.
 
-* ✅ **Evidence-Based:** Every answer is derived from specialist-curated content.
-* ✅ **Socially Impactful:** Making high-quality counseling accessible to all families, regardless of background.
-* ✅ **Transparent:** Directly citing the original expert articles to build trust.
+**[ElternLeben.de](https://www.elternleben.de/)** is a non-profit with 750+ expert-vetted articles and a team of certified counsellors. The knowledge exists. But parents can't search it — they can only browse.
+
+This project makes that expertise conversational, instant, and free.
+
+| What it solves | How |
+|---|---|
+| Information overload from contradictory online advice | Every answer is grounded in ElternLeben's verified expert content |
+| Professional counselling gatekept by cost and availability | Free, 24/7, no appointment needed |
+| Generic AI that parents can't trust | Every response cites the original source article |
+| Distance between content and services | Parents can book consultations and register for webinars directly in chat |
+
+> High-quality parenting guidance in Germany is expensive and gatekept. This makes it accessible.
 
 ---
 
 ## 🚀 Key Features
 
-* **RAG-Powered Reliability:** Uses Retrieval-Augmented Generation to minimize hallucinations and prioritize expert knowledge.
-* **Source Attribution:** Automatically provides clickable links to the original Markdown sources from the ElternLeben dataset.
-* **Dockerized Microservices:** A professional-grade architecture featuring a **FastAPI** backend and a **Gradio 5** frontend.
-* **German Language Support:** Optimized for the German parenting context and terminology.
+### 1. RAG-Powered Answers
+Responses are grounded in 750+ expert articles from ElternLeben.de using Retrieval-Augmented Generation — not generic LLM knowledge. Every answer cites the original source URL so parents can verify the advice themselves.
+
+### 2. Source Attribution
+Each response includes clickable links to the original ElternLeben.de articles. This is the core trust mechanism — it's not just a feature, it's what makes parents willing to act on the advice.
+
+### 3. Service Integration via Tool Use
+The assistant seamlessly transitions from answering questions to completing real service actions — using OpenAI function calling to connect with the ElternLeben service ecosystem:
+
+- **Webinar registration** — discover upcoming seminars and register within the chat
+- **Consultation booking** — find available experts, browse time slots, and confirm appointments through a guided multi-turn conversation
+
+### 4. Full Docker Deployment
+Two-container architecture with Docker Compose. The frontend and backend run as independent services — production-ready structure from day one.
 
 ---
 
 ## 🏗️ System Architecture
 
-The application is built using a microservices approach, fully containerized with Docker. The RAG pipeline ensures that the assistant's responses are grounded in verified parenting expertise.
-
 ```mermaid
 flowchart TD
-    subgraph Frontend [Docker: Frontend Service]
-    A[User] <--> B[Gradio UI]
+    subgraph Frontend [Docker: Frontend Service :7860]
+        A[User] <--> B[Gradio 5 UI]
     end
 
-    subgraph Backend [Docker: Backend Service]
-    B <--> C[FastAPI API]
-    C --> D[RAG Engine]
-    
-    subgraph RAG_Pipeline [RAG Pipeline]
-    D --> E[1. Semantic Search]
-    E -.-> F[(Markdown Expert DB)]
-    F -.-> G[2. Context Augmentation]
-    G --> H[3. LLM Generation]
-    end
+    subgraph Backend [Docker: Backend Service :8000]
+        B <-->|POST /chat| C[FastAPI]
+        C --> D[RAG Engine]
+
+        subgraph RAG [RAG Pipeline]
+            D --> E[Semantic Search\nNumPy cosine similarity]
+            E -.->|top-5 chunks| F[(750+ MD files\nElternLeben.de)]
+            F -.-> G[Context Augmentation]
+            G --> H[GPT-4o-mini]
+        end
+
+        C --> I[Tool Use Engine]
+        subgraph Tools [OpenAI Function Calling]
+            I --> J[get_webinars]
+            I --> K[register_for_webinar]
+            I --> L[get_available_experts]
+            I --> M[get_expert_slots]
+            I --> N[book_consultation]
+        end
     end
 
-    H <--> I[OpenAI / Azure OpenAI]
+    H <--> O[OpenAI API]
+    J & K <-->|HTTP| P[Mock API :8001\nWebinar Service]
+    L & M & N <-->|HTTP| Q[Mock API :8001\nConsultation Service]
 
     style Frontend fill:#e1f5fe,stroke:#01579b
     style Backend fill:#fff3e0,stroke:#e65100
+    style Tools fill:#f3e5f5,stroke:#6a1b9a
 ```
-     
+
 ---
 
 ## 🧠 Tech Stack
 
 | Layer | Technology |
-| :--- | :--- |
-| **LLM / Embeddings** | OpenAI GPT-4o-mini / OpenAI text-embedding-3-small |
-| **Vector Search** | NumPy (Cosine Similarity) |
-| **Orchestration** | Docker & Docker Compose |
-| **Backend Framework** | FastAPI (Python 3.10+) |
-| **Frontend UI** | Gradio 5.x |
-| **Data Source** | ElternLeben.de Knowledge Base (750+ MD files) |
+|---|---|
+| LLM | GPT-4o-mini |
+| Embeddings | OpenAI text-embedding-3-small |
+| Vector Search | NumPy cosine similarity (in-memory) |
+| Service Integration | OpenAI Function Calling |
+| Backend | FastAPI (Python 3.10+) |
+| Frontend | Gradio 5.x |
+| Orchestration | Docker Compose (2 containers) |
+| Mock Services | FastAPI + SQLite (Webinar & Consultation API) |
+| Data | 750+ Markdown files — ElternLeben.de |
 
 ---
 
-## 👩‍💻 My Contribution
+## 💬 Demo
 
-- Designed and implemented end-to-end RAG system
-- Built FastAPI backend with semantic search
-- Developed Gradio-based chat interface
-- Containerized the system using Docker
-- Implemented embedding caching for performance optimization
+<img src="demo.png" width="900"/>
+
+---
+
+## ⚙️ Setup & Installation
+
+### Prerequisites
+- Docker Desktop
+- OpenAI API key
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/jeannineshiu/ai-parenting-chatbot.git
+cd ai-parenting-chatbot
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+# Add your OpenAI API key to .env
+```
+
+### 3. Generate the embedding cache (first run only)
+
+The embedding cache must be built on the host before starting Docker, as the backend requires internet access to call the OpenAI embeddings API:
+
+```bash
+pip install openai numpy python-dotenv
+python3 -c "
+import sys; sys.path.insert(0, 'backend')
+from rag import load_documents
+docs = load_documents('data')
+print(f'Loaded {len(docs)} docs')
+"
+```
+
+This takes a few minutes and only needs to run once.
+
+### 4. Launch with Docker
+
+```bash
+docker compose up --build
+```
+
+### 5. (Optional) Run the Mock Service API
+
+For service integration features (webinar registration, consultation booking):
+
+```bash
+git clone https://github.com/n3xtcoder/ai4impact-elternleben.git
+cd ai4impact-elternleben/mock_api
+pip install fastapi uvicorn sqlalchemy pydantic python-multipart
+python create_database.py
+uvicorn mock_api:app --reload --port 8001
+```
+
+### 6. Access the assistant
+
+| Service | URL |
+|---|---|
+| Chat UI | http://localhost:7860 |
+| Backend API docs | http://localhost:8000/docs |
+| Mock Service API docs | http://localhost:8001/docs |
 
 ---
 
 ## 📂 Project Structure
 
-```text
-├── backend/            # RAG implementation & FastAPI endpoints
-├── frontend/           # Gradio UI (optimized for Gradio 5.x)
-├── data/               # 750+ Markdown articles from ElternLeben.de
-├── .env.example        # Template for environment variables
-└── docker-compose.yml  # Microservices orchestration
 ```
+├── backend/
+│   ├── main.py              # FastAPI endpoints + tool use logic
+│   ├── rag.py               # Embedding, chunking, semantic search
+│   ├── embedding_cache.json # Pre-computed embeddings (generated locally)
+│   └── requirements.txt
+├── frontend/
+│   └── app.py               # Gradio 5 chat interface
+├── data/                    # 750+ Markdown articles from ElternLeben.de
+├── docker-compose.yml
+└── .env.example
+```
+
 ---
 
-## ⚙️ Setup & Installation
+## 🔍 Technical Design Decisions
 
-### 1. Clone the Repository
-```bash
-git clone [https://github.com/jeannineshiu/ai-parenting-chatbot.git](https://github.com/jeannineshiu/ai-parenting-chatbot.git)
-cd ai-parenting-chatbot
-```
+### NumPy over a Vector Database
+At 750 documents (~4,800 chunks), batch cosine similarity with NumPy is fast enough. FAISS or ChromaDB pays off at 50K+ documents. Simplicity wins at this scale. The right time to add complexity is when the data grows, not when building the first version.
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root directory and add your API key:
-```bash
-OPENAI_API_KEY=your_actual_key_here
-```
+### URL extraction before text cleaning
+Each Markdown file contains a YAML frontmatter block with the original ElternLeben.de URL. The pipeline extracts this URL *before* stripping the frontmatter, so every chunk retains its source link — enabling accurate citations even after the text is cleaned and split.
 
-### 3. Launch with Docker
-```bash
-docker compose up --build
-```
+### Source attribution as a trust mechanism
+The system prompt instructs the model to only use the provided context. The frontend always surfaces the source URLs. Showing the source is not just a feature — it's what makes parents willing to act on the advice, and it's what distinguishes this from a generic chatbot.
 
-### 4. Access the Assistant
-* Frontend UI: http://localhost:7860
+### Tool use for service routing
+Rather than rule-based intent detection, the assistant uses OpenAI function calling to decide when to transition from information to services. The LLM determines when the user needs a webinar or consultation, collects required fields through natural conversation, and calls the appropriate API endpoint — creating a seamless flow between Q&A and real service actions.
 
-* API Documentation: http://localhost:8000/docs
+---
 
-## 📌 Technical Deep Dive: The RAG Pipeline
-* **Ingestion**: 750+ Markdown files from the ElternLeben dataset are processed, cleaned, and partitioned into chunks.
+## 🛣️ Roadmap
 
-* **Retrieval**: User queries are vectorized and matched against the knowledge base using semantic similarity.
-
-* **Augmentation**: The most relevant expert content is injected into the LLM prompt as context.
-
-* **Generation**: The model generates a response grounded strictly in the provided ElternLeben expertise to ensure safety and accuracy.
-
-## 🛣️ Roadmap & Future Improvements
-
-- [ ] **Vector Database:** Transition from in-memory search to **FAISS** or **ChromaDB** for enhanced scalability and performance as the knowledge base grows.
-- [ ] **Hybrid Search:** Combine semantic search with **BM25 keyword matching** to better handle specific German medical, legal, and parenting terminology.
-- [ ] **Evaluation:** Implement **Ragas** (RAG Assessment) to quantitatively measure "Faithfulness," "Answer Relevancy," and "Context Precision."
-- [ ] **Cloud Deployment:** Professional production deployment via **Azure Container Apps** for high availability and automated scaling.
-
+- [ ] **Hybrid Search** — Combine semantic search with BM25 for better handling of specific German parenting and medical terminology
+- [ ] **Vector Database** — Migrate to ChromaDB for scalability as the knowledge base grows
+- [ ] **RAG Evaluation** — Implement RAGAS to measure Faithfulness, Answer Relevancy, and Context Precision
+- [ ] **Analytics Tracking** — Log service interaction events to surface insights for the ElternLeben team
+- [ ] **Azure Deployment** — Production deployment via Azure Container Apps
