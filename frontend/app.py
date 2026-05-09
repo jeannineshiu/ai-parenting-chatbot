@@ -11,7 +11,7 @@ def chat(message, history):
     """
     try:
         # Requesting answer from backend with a 30s timeout
-        response = requests.post(API_URL, json={"question": message}, timeout=30)
+        response = requests.post(API_URL, json={"question": message}, timeout=120)
         response.raise_for_status()
         data = response.json()
 
