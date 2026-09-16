@@ -16,13 +16,30 @@ MOCK_API_URL = os.getenv("MOCK_API_URL", "http://host.docker.internal:8001")
 
 app = FastAPI()
 
-docs = load_documents("../data")
+docs = load_documents()
 print(f"Loaded {len(docs)} documents")
 
-chat_history = []
+# One history per session so concurrent users never see each other's messages.
+# Each history holds the full OpenAI message sequence (user / assistant /
+# assistant+tool_calls / tool) so that IDs returned by tools stay available
+# across turns of a multi-step booking.
+chat_histories: dict[str, list] = {}
+
+# Number of most recent user turns to send back to the model
+MAX_HISTORY_TURNS = 3
 
 class Query(BaseModel):
     question: str
+    session_id: str = "default"
+
+
+def recent_turns(history: list, max_turns: int) -> list:
+    """Return the last `max_turns` user turns, cutting only at a user message
+    so an assistant tool_calls message is never separated from its tool results."""
+    user_indexes = [i for i, m in enumerate(history) if m["role"] == "user"]
+    if len(user_indexes) <= max_turns:
+        return history
+    return history[user_indexes[-max_turns]:]
 
 # ------------- Tool Definitions -------------
 
@@ -159,12 +176,12 @@ def chat(query: Query):
     results = semantic_search(query.question, docs)
     context = "\n\n".join([doc["content"][:500] for doc in results])
 
-    chat_history.append({"role": "user", "content": query.question})
+    history = chat_histories.setdefault(query.session_id, [])
+    history.append({"role": "user", "content": query.question})
 
-    messages = [
-        {
-            "role": "system",
-            "content": f"""Du bist ein einfühlsamer Eltern-Assistent von ElternLeben.de.
+    system_message = {
+        "role": "system",
+        "content": f"""Du bist ein einfühlsamer Eltern-Assistent von ElternLeben.de.
 
 Beantworte Fragen auf Basis des folgenden Kontexts. Sei klar, hilfreich und unterstützend.
 Kopiere den Text nicht direkt.
@@ -175,40 +192,48 @@ Frage nach fehlenden Informationen (Name, E-Mail), bevor du eine Buchung durchf�
 
 Kontext:
 {context}""",
-        },
-        *chat_history[-6:],
-    ]
+    }
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        tools=tools,
-        temperature=0.3,
-    )
+    def complete():
+        return client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[system_message, *recent_turns(history, MAX_HISTORY_TURNS)],
+            tools=tools,
+            temperature=0.3,
+        )
 
-    # Handle tool call loop
+    response = complete()
+
+    # Handle tool call loop. Every intermediate message is stored in the session
+    # history so tool results (expert IDs, webinar IDs, ...) survive to later turns.
     while response.choices[0].finish_reason == "tool_calls":
-        tool_calls = response.choices[0].message.tool_calls
-        messages.append(response.choices[0].message)
+        message = response.choices[0].message
+        history.append({
+            "role": "assistant",
+            "content": message.content,
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                }
+                for tc in message.tool_calls
+            ],
+        })
 
-        for tc in tool_calls:
+        for tc in message.tool_calls:
             args = json.loads(tc.function.arguments)
             result = call_tool(tc.function.name, args)
-            messages.append({
+            history.append({
                 "role": "tool",
                 "tool_call_id": tc.id,
                 "content": json.dumps(result, ensure_ascii=False),
             })
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            tools=tools,
-            temperature=0.3,
-        )
+        response = complete()
 
     answer = response.choices[0].message.content
-    chat_history.append({"role": "assistant", "content": answer})
+    history.append({"role": "assistant", "content": answer})
 
     sources = list(dict.fromkeys(
         doc["url"] for doc in results if doc.get("url")
