@@ -26,6 +26,12 @@ import json
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "embedding_cache.json")
 
+# 資料夾位置：docker-compose 設 DATA_DIR=/data；本機預設為 repo 根目錄的 data/
+DATA_DIR = os.getenv(
+    "DATA_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data"),
+)
+
 def extract_url(text):
     in_frontmatter = False
     for line in text.split("\n"):
@@ -70,7 +76,7 @@ def chunk_text(text, chunk_size=150):
 
     return chunks
 
-def load_documents(folder_path="data"):
+def load_documents(folder_path=DATA_DIR):
     docs = []
 
     # 如果 cache 存在 → 直接讀
@@ -138,44 +144,3 @@ def semantic_search(query, docs):
     scored.sort(key=lambda x: x[0], reverse=True)
 
     return [doc for score, doc in scored[:5]]  # 多拿一點
-
-def generate_answer(query, context_docs):
-    context = "\n\n".join([
-        f"[Source {i+1}]\n{doc['content'][:300]}"
-        for i, doc in enumerate(context_docs)
-    ])
-
-    sources = list(set(doc["source"] for doc in context_docs))
-
-    prompt = f"""
-    You are a helpful parenting assistant.
-
-    Use ONLY the provided context to answer the question.
-
-    Guidelines:
-    - Answer in German
-    - Be clear, structured, and supportive
-    - Give practical advice
-    - Do NOT copy text directly
-    - If helpful, ask one follow-up question
-
-    Context:
-    {context}
-
-    Question:
-    {query}
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful parenting assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.3
-    )
-
-    return {
-        "answer": response.choices[0].message.content,
-        "sources": sources
-    }
