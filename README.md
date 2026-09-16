@@ -178,10 +178,63 @@ uvicorn mock_api:app --reload --port 8001
 │   └── requirements.txt
 ├── frontend/
 │   └── app.py               # Gradio 5 chat interface
+├── eval/
+│   ├── build_testset.py     # Generates questions + reference answers from articles
+│   ├── testset.json         # 20 hand-reviewed evaluation samples
+│   ├── run_ragas.py         # Runs the chat pipeline and scores it with RAGAS
+│   └── results/             # Timestamped runs (summary.json + samples.csv)
 ├── data/                    # 750+ Markdown articles from ElternLeben.de
 ├── docker-compose.yml
 └── .env.example
 ```
+
+---
+
+## 📊 RAG Evaluation (RAGAS)
+
+The retrieval and generation quality is measured with [RAGAS](https://docs.ragas.io/) on 20 questions spanning pregnancy, babies, toddlers, school kids, teenagers and parental health.
+
+### Results: evaluation-driven fix
+
+The first evaluation exposed a context truncation bug. Each configuration was run **3 times** (mean ± std) because LLM-judge scores vary between runs.
+
+| Metric | Before (500 chars/chunk) | After (full chunks) | What it measures |
+|---|---|---|---|
+| Faithfulness | 0.68 ± 0.04 | **0.88 ± 0.01** | Share of claims in the answer supported by the retrieved context |
+| Context Recall | 0.59 ± 0.02 | **0.94 ± 0.02** | How much of the reference answer is covered by the retrieved context |
+| Context Precision | 0.80 ± 0.04 | **0.91 ± 0.01** | Whether relevant chunks are ranked at the top |
+| Answer Relevancy | 0.74 ± 0.00 | 0.74 ± 0.00 | How directly the answer addresses the question |
+| Hit Rate@5 | 0.90 | 0.90 | Source article appears in the top-5 retrieved chunks (no LLM) |
+| MRR | 0.80 | 0.80 | Mean reciprocal rank of the source article (no LLM) |
+
+Generator `gpt-4o-mini` · Judge `gpt-4o` · Embeddings `text-embedding-3-small` · All runs: [`eval/results/`](eval/results/)
+
+**Diagnosis.** Retrieval already found the right article (hit rate 0.90), yet faithfulness and recall were low. **93% of chunks were longer than the 500 characters passed to the model** (median ≈ 1,000), so the model saw only the first half of each chunk and filled the gaps with general knowledge. For the SIDS question the correct article ranked #1, but context recall was 0.07 and faithfulness 0.24 — the concrete recommendations (room temperature 16–18 °C, sleeping bag, no hat) were in the truncated half.
+
+**Fix.** Pass whole chunks (`CONTEXT_CHARS = None` in `backend/main.py`). The SIDS question went to recall 1.00 / faithfulness 0.88. Hit rate and MRR are unchanged, as expected — the retrieved chunks are identical, only how much of them the model sees changed. Context precision rose too because the judge scores the same truncated text: with whole chunks it can recognise relevant ones it previously could not.
+
+**Remaining weak spots.** Faithfulness is still ≈0.6–0.7 on teething, parental burnout and stuttering; the stuttering article is not retrieved in the top 5 at all. These are the next targets (hybrid search, prompt tightening).
+
+### Methodology notes
+- **Same pipeline as production** — the evaluation calls `run_chat()` in `backend/main.py`, the exact function behind `/chat`.
+- **Stronger judge than generator** — `gpt-4o` scores the `gpt-4o-mini` answers to reduce self-preference bias. Reference answers were also written by `gpt-4o` from the source article and spot-checked by hand.
+- **German prompt adaptation** — RAGAS prompts are English by default. Answer Relevancy generates questions back from the answer and compares embeddings with the user's question; English questions against German input scored 0.27 on a clearly relevant answer, 0.82 after adapting the prompts to German.
+- **Limitations** — 20 samples, single-turn only, and LLM-judge scores vary by a few points between runs. Questions were generated from single articles, which favours retrieval compared to real user questions.
+
+### Run it yourself
+
+```bash
+uv venv .venv-eval --python 3.12
+uv pip install --python .venv-eval/bin/python -r eval/requirements.txt
+.venv-eval/bin/python eval/run_ragas.py            # full run (20 questions)
+.venv-eval/bin/python eval/run_ragas.py --limit 3  # quick smoke test
+
+# Compare configurations over repeated runs
+.venv-eval/bin/python eval/run_ragas.py --context-chars 500 --label ctx500
+.venv-eval/bin/python eval/compare_runs.py ctx500 ctxfull
+```
+
+The evaluation dependencies live in a separate environment so the backend image stays small.
 
 ---
 
@@ -205,6 +258,7 @@ Rather than rule-based intent detection, the assistant uses OpenAI function call
 
 - [ ] **Hybrid Search** — Combine semantic search with BM25 for better handling of specific German parenting and medical terminology
 - [ ] **Vector Database** — Migrate to ChromaDB for scalability as the knowledge base grows
-- [ ] **RAG Evaluation** — Implement RAGAS to measure Faithfulness, Answer Relevancy, and Context Precision
+- [x] **RAG Evaluation** — RAGAS baseline for Faithfulness, Answer Relevancy, Context Precision and Context Recall
+- [x] **Context Window Tuning** — Pass full chunks instead of the first 500 characters (faithfulness 0.68 → 0.88)
 - [ ] **Analytics Tracking** — Log service interaction events to surface insights for the ElternLeben team
 - [ ] **Azure Deployment** — Production deployment via Azure Container Apps

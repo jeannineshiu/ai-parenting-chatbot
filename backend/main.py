@@ -169,17 +169,24 @@ def call_tool(name: str, args: dict) -> dict:
 
     return {"error": f"Unknown tool: {name}"}
 
-# ------------- Chat Endpoint -------------
+# ------------- Chat Pipeline -------------
 
-@app.post("/chat")
-def chat(query: Query):
-    results = semantic_search(query.question, docs)
-    context = "\n\n".join([doc["content"][:500] for doc in results])
+# Characters of each retrieved chunk passed to the model (None = whole chunk).
+# Truncating to 500 cut off most chunks (median ~1,000 chars); RAGAS showed whole
+# chunks raise faithfulness 0.68 -> 0.88 and context recall 0.59 -> 0.94.
+CONTEXT_CHARS = None
 
-    history = chat_histories.setdefault(query.session_id, [])
-    history.append({"role": "user", "content": query.question})
 
-    system_message = {
+def retrieve(question: str) -> tuple[list, list[str]]:
+    """Return the top retrieved documents and the context strings the model sees."""
+    results = semantic_search(question, docs)
+    contexts = [doc["content"][:CONTEXT_CHARS] for doc in results]
+    return results, contexts
+
+
+def build_system_message(contexts: list[str]) -> dict:
+    context = "\n\n".join(contexts)
+    return {
         "role": "system",
         "content": f"""Du bist ein einfÃ¼hlsamer Eltern-Assistent von ElternLeben.de.
 
@@ -193,6 +200,18 @@ Frage nach fehlenden Informationen (Name, E-Mail), bevor du eine Buchung durchfÃ
 Kontext:
 {context}""",
     }
+
+
+def run_chat(question: str, history: list) -> tuple[str, list, list[str]]:
+    """Answer `question` using RAG + tool calls, appending all messages to `history`.
+
+    Shared by the /chat endpoint and the RAGAS evaluation (eval/run_ragas.py),
+    so both exercise exactly the same pipeline.
+    Returns (answer, retrieved documents, context strings given to the model).
+    """
+    results, contexts = retrieve(question)
+    history.append({"role": "user", "content": question})
+    system_message = build_system_message(contexts)
 
     def complete():
         return client.chat.completions.create(
@@ -223,7 +242,11 @@ Kontext:
 
         for tc in message.tool_calls:
             args = json.loads(tc.function.arguments)
-            result = call_tool(tc.function.name, args)
+            try:
+                result = call_tool(tc.function.name, args)
+            except (http_requests.RequestException, ValueError) as e:
+                # Let the model tell the user the service is unavailable instead of crashing
+                result = {"error": f"Service nicht erreichbar: {e}"}
             history.append({
                 "role": "tool",
                 "tool_call_id": tc.id,
@@ -234,6 +257,14 @@ Kontext:
 
     answer = response.choices[0].message.content
     history.append({"role": "assistant", "content": answer})
+    return answer, results, contexts
+
+# ------------- Chat Endpoint -------------
+
+@app.post("/chat")
+def chat(query: Query):
+    history = chat_histories.setdefault(query.session_id, [])
+    answer, results, _ = run_chat(query.question, history)
 
     sources = list(dict.fromkeys(
         doc["url"] for doc in results if doc.get("url")

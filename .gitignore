@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 embedding_cache.json
 .DS_Store
+.venv-eval/

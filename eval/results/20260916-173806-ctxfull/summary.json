@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-09-16T17:38:06",
+  "git_commit": "cf0b7a4",
+  "n_samples": 20,
+  "generator_model": "gpt-4o-mini",
+  "judge_model": "gpt-4o",
+  "prompt_language": "german",
+  "embedding_model": "text-embedding-3-small",
+  "top_k": 5,
+  "context_chars": "full",
+  "metrics": {
+    "faithfulness": 0.8888,
+    "answer_relevancy": 0.736,
+    "context_precision": 0.9177,
+    "context_recall": 0.9633
+  },
+  "retrieval": {
+    "hit_rate@5": 0.9,
+    "mrr": 0.7975
+  },
+  "failed_metric_calls": 0
+}
